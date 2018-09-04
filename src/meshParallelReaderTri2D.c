@@ -13,7 +13,9 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
 
   if(rank==0){
     mesh_t *globalMesh = meshReaderTri2D(fileName);
-
+    printf("Nfaces = %d\n", globalMesh->Nfaces);
+    printf("global Nelements = %d\n", globalMesh->Nelements);
+    
     // need to send Nelements, EX, EY, EToV, EToB for each rank
     int *rNelements = (int*) calloc(size, sizeof(int));
     for(int e=0;e<globalMesh->Nelements;++e){
@@ -35,10 +37,12 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
 	  EY[idOut] = globalMesh->VY[globalMesh->EToV[e*globalMesh->Nverts+v]];
 	  EToV[idOut] = globalMesh->EToV[e*globalMesh->Nverts+v];
 	}
+#if 0
 	for(int f=0;f<globalMesh->Nfaces;++f){
 	  int idOut = cnt*globalMesh->Nfaces+f;
 	  EToB[idOut] = globalMesh->EToB[e*globalMesh->Nfaces+f];
 	}
+#endif
 	++cnt;
       }
 
@@ -102,5 +106,30 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
 
   printf("rank %d got %d elements \n", rank, localMesh->Nelements);
 
+  char matName[BUFSIZ];
+  sprintf(matName, "foo_%05d.m", rank);
+  FILE *mat = (FILE*) fopen(matName, "w");
+
+  fprintf(mat, "EX = [\n");
+  for(int v=0;v<localMesh->Nverts;++v){
+    for(int e=0;e<localMesh->Nelements;++e){
+      fprintf(mat, "%lg ",
+	      localMesh->EX[e*localMesh->Nverts+v]);
+    }
+    fprintf(mat, "\n");
+  }
+  fprintf(mat, "];\n");
+  
+  fprintf(mat, "EY = [\n");
+  for(int v=0;v<localMesh->Nverts;++v){
+    for(int e=0;e<localMesh->Nelements;++e){
+      fprintf(mat, "%lg ",
+	      localMesh->EY[e*localMesh->Nverts+v]);
+    }
+    fprintf(mat, "\n");
+  }
+  fprintf(mat, "];\n");
+  fclose(mat);
+  
   return localMesh;
 }

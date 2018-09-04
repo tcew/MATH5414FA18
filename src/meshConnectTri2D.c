@@ -59,6 +59,7 @@ void meshConnectTri2D(mesh_t *mesh){
   
   // search for pairs
   mesh->EToE = (int*) calloc(mesh->Nfaces*mesh->Nelements, sizeof(int));
+  mesh->EToF = (int*) calloc(mesh->Nfaces*mesh->Nelements, sizeof(int));
   for(int f=0;f<mesh->Nfaces*mesh->Nelements;++f){
     mesh->EToE[f] = -1;
     mesh->EToF[f] = -1;
