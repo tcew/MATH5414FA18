@@ -3,9 +3,13 @@
 
 int main(int argc, char **argv){
 
-  mesh_t *mesh = meshReaderTri2D(argv[1]);
+  MPI_Init(&argc, &argv);
+  
+  mesh_t *mesh = meshParallelReaderTri2D(argv[1]);
 
   meshConnectTri2D(mesh);
   
+  MPI_Finalize();
+
   return 0;
 }

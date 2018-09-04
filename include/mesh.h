@@ -3,7 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mpi.h"
+
 #define dfloat double
+#define MPI_DFLOAT MPI_DOUBLE
 
 typedef struct {
   
@@ -15,6 +18,9 @@ typedef struct {
   dfloat *VX; /* array of x-coordinates of vertices */
   dfloat *VY; /* array of y-coordinates of vertices */
 
+  dfloat *EX; /* array of x-coords of element vertices */
+  dfloat *EY; /* array of y-coords of element vertices */
+
   int Nelements; /* number of elements in mesh */
   
   int    *EToV; /* array of element-to-vertex conn 
@@ -22,9 +28,14 @@ typedef struct {
 
   int    *EToB; /* element to boundary face conn 
 		 -- Nelements x Nfaces */
+
+  int    *EToE;
+  int    *EToF;
   
 }mesh_t;
 
 
 mesh_t *meshReaderTri2D(const char * fileName );
 void meshConnectTri2D(mesh_t *mesh);
+
+mesh_t *meshParallelReaderTri2D(const char * fileName);
