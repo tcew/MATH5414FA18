@@ -106,6 +106,7 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
 
   printf("rank %d got %d elements \n", rank, localMesh->Nelements);
 
+#if 0
   char matName[BUFSIZ];
   sprintf(matName, "foo_%05d.m", rank);
   FILE *mat = (FILE*) fopen(matName, "w");
@@ -130,6 +131,7 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
   }
   fprintf(mat, "];\n");
   fclose(mat);
+#endif
   
   return localMesh;
 }

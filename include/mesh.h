@@ -39,3 +39,8 @@ mesh_t *meshReaderTri2D(const char * fileName );
 void meshConnectTri2D(mesh_t *mesh);
 
 mesh_t *meshParallelReaderTri2D(const char * fileName);
+
+#define mymax(a,b) ( ((a)>(b)) ? (a):(b) )
+#define mymin(a,b) ( ((a)<(b)) ? (a):(b) )
+
+void meshVTUTri2D(mesh_t *msh, char *fileName);
