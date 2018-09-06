@@ -13,24 +13,40 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
 
   if(rank==0){
     mesh_t *globalMesh = meshReaderTri2D(fileName);
+
+    meshMortonOrderingTri2D(globalMesh);
+    
     printf("Nfaces = %d\n", globalMesh->Nfaces);
     printf("global Nelements = %d\n", globalMesh->Nelements);
     
     // need to send Nelements, EX, EY, EToV, EToB for each rank
     int *rNelements = (int*) calloc(size, sizeof(int));
-    for(int e=0;e<globalMesh->Nelements;++e){
-      ++rNelements[e%size];
-    }
 
+    int baseChunk = globalMesh->Nelements/size;
+    int remainder = globalMesh->Nelements - size*baseChunk;
+    
+    for(int r=0;r<size;++r){
+      rNelements[r] = baseChunk;
+      rNelements[r] += (r<remainder);
+    }
+    
     for(int r=0;r<size;++r){
       int Nel = rNelements[r];
+
+      int startElement;
+      if(r<remainder)
+	startElement = (baseChunk+1)*r;
+      else
+	startElement = (baseChunk+1)*remainder
+	  + baseChunk*(r-remainder);
+      
       dfloat *EX = (dfloat*) calloc(Nel*globalMesh->Nverts, sizeof(dfloat));
       dfloat *EY = (dfloat*) calloc(Nel*globalMesh->Nverts, sizeof(dfloat));
       int *EToV = (int*) calloc(Nel*globalMesh->Nverts, sizeof(int));
       int *EToB = (int*) calloc(Nel*globalMesh->Nfaces, sizeof(int));
 
       int cnt = 0;
-      for(int e=r;e<globalMesh->Nelements;e+=size){
+      for(int e=startElement;e<startElement+Nel;++e){
 	for(int v=0;v<globalMesh->Nverts;++v){
 	  int idOut = cnt*globalMesh->Nverts+v;
 	  EX[idOut] = globalMesh->VX[globalMesh->EToV[e*globalMesh->Nverts+v]];

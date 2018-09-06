@@ -44,3 +44,5 @@ mesh_t *meshParallelReaderTri2D(const char * fileName);
 #define mymin(a,b) ( ((a)<(b)) ? (a):(b) )
 
 void meshVTUTri2D(mesh_t *msh, char *fileName);
+
+void meshMortonOrderingTri2D(mesh_t *mesh);
