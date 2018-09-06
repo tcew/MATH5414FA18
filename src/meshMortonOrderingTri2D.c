@@ -15,14 +15,14 @@ ulli mortonIndex(unsigned int x, unsigned int y){
     index += mask * ( (x & xymask)!=0) ;
     mask <<= 1;
 
-    printf("x: b =%d, index = %llu, mask = %llu\n",
-	   b, index, mask);
+    //    printf("x: b =%d, index = %llu, mask = %llu\n",
+    //	   b, index, mask);
     
     index += mask * ( (y & xymask)!=0) ;
     mask <<= 1;
 
-    printf("y: b =%d, index = %llu, mask = %llu\n",
-	   b, index, mask);
+    //    printf("y: b =%d, index = %llu, mask = %llu\n",
+    //	   b, index, mask);
     
     xymask <<= 1;
   }
