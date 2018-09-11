@@ -29,7 +29,7 @@ mesh_t *meshReaderTri2D(const char * fileName ){
     fscanf(fp, "%*d %lf %lf %*lf", 
 	   mesh->VX+v,
 	   mesh->VY+v);
-    printf("%d %g %g \n", v, mesh->VX[v], mesh->VY[v]);
+    //    printf("%d %g %g \n", v, mesh->VX[v], mesh->VY[v]);
   }
 
   do{
@@ -51,15 +51,15 @@ mesh_t *meshReaderTri2D(const char * fileName ){
     for(int t=0;t<Ntags;++t)
       fscanf(fp, "%*d");
 
-    printf("EToV[e,:]= ");
+    //    printf("EToV[e,:]= ");
     for(int v=0;v<mesh->Nverts;++v){
       fscanf(fp, "%d", mesh->EToV + e*mesh->Nverts+v);
 
       // change from 1-index to 0-index
       --(mesh->EToV[e*mesh->Nverts+v]);
-      printf("%d ", mesh->EToV[e*mesh->Nverts+v]);
+      //      printf("%d ", mesh->EToV[e*mesh->Nverts+v]);
     }
-    printf("\n");
+    //    printf("\n");
   }
 
   fclose(fp);

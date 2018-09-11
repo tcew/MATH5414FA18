@@ -14,7 +14,11 @@ mesh_t *meshParallelReaderTri2D(const char * fileName){
   if(rank==0){
     mesh_t *globalMesh = meshReaderTri2D(fileName);
 
+    double tic = MPI_Wtime();
     meshMortonOrderingTri2D(globalMesh);
+    double toc = MPI_Wtime();
+
+    printf("Morton elapsed = %lf\n", toc-tic);
     
     printf("Nfaces = %d\n", globalMesh->Nfaces);
     printf("global Nelements = %d\n", globalMesh->Nelements);
