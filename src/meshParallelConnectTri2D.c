@@ -1,6 +1,7 @@
 
 #include "mesh.h"
 
+// lonely face: meta data associated with a disconnected face
 typedef struct {
 
   int element;
@@ -15,6 +16,7 @@ typedef struct {
 
 } lonelyFace_t;
 
+// find all element-to-element connections across all processes
 void meshParallelConnectTri2D(mesh_t *mesh){
 
   int rank, size;
@@ -33,11 +35,13 @@ void meshParallelConnectTri2D(mesh_t *mesh){
 	int v1 = mesh->EToV[e*mesh->Nverts + f];
 	int v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
 	int targetRank = min(v1,v2)%size;
+	// count in bytes
 	sendCounts[targetRank] += sizeof(lonelyFace_t);
       }
     }
   }
 
+  // construct the cumulative sum of sendCounts and reset sendCounts
   int *sendDispls = (int*) calloc(size+1, sizeof(int));
   sendDispls[0] = 0;
   for(int r=0;r<size;++r){
@@ -45,6 +49,7 @@ void meshParallelConnectTri2D(mesh_t *mesh){
     sendCounts[r] = 0;
   }
 
+  // collect the outgoing lonelyFaces 
   lonelyFace_t *sendBuf = (lonelyFace_t*) malloc(sendDispls[size]);
 
   for(int e=0;e<mesh->Nelements;++e){
@@ -54,47 +59,54 @@ void meshParallelConnectTri2D(mesh_t *mesh){
 	int v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
 	int targetRank = min(v1,v2)%size;
 
+	// meta data for this lonelyFace
 	lonelyFace_t lonely;
-
 	lonely.element = e;
 	lonely.face = f;
 	lonely.v1 = v1;
 	lonely.v2 = v2;
 	lonely.rank =  rank;
 
+	// identify where this lonelyFace goes in the outgoing buffer
 	int id = sendDispls[targetRank] + sendCounts[targetRank];
-	id /= sizeof(lonelyFace_t);
+	id /= sizeof(lonelyFace_t); // adjust for bytes
 	lonelyFaces[id] = lonely;
-		    
+
+	// increment sendCounts again
 	sendCounts[targetRank] += sizeof(lonelyFace_t);
       }
     }
   }
 
-  // find out how many things to receive
+  // find out how many lonelyFaces to receive from each process
   int* recvCounts = (int*) calloc(size, sizeof(int));
   MPI_Alltoall(sendCounts, 1, MPI_INT,
 	       recvCounts, 1, MPI_INT,
 	       MPI_COMM_WORLD);
-	       
+
+  // form cumulative sum of recvCounts
   int *recvDispls = (int*) calloc(size+1, sizeof(int));
   recvDispls[0] = 0;
   for(int r=0;r<size;++r)
     recvDispls[r+1] = recvDispls[r]+recvCounts[r];
 
+  // count how many lonelyFaces you are going to receive
   int NlonelyFaces = recvDispls[size]/sizeof(lonelyFace_t);
   
   lonelyFace_t *recvBuf =
     (lonelyFace_t*) malloc(NlonelyFaces*sizeof(lonelyFace_t));
 
+  // exchange lonelyFaces with all other ranks
   MPI_Alltoallv(sendBuf, sendCounts, sendDispls, MPI_CHAR,
 		recvBuf, recvCounts, recvDispls, MPI_CHAR,
 		MPI_COMM_WORLD);
-  
+
+  // sort based on [v1,v2]
   qsort(recvBuf, NlonelyFaces,
 	sizeof(lonelyFace_t),
 	compareLonelyFaces);
 
+  // fill in meta data for any found match
   for(int n=0;n<NlonelyFaces-1;++n){
     if(compareLonelyFaces(recvBuf+n, recvBuf+n+1)==0){
       recvBuf[n].elementN = recvBuf[n+1].element;
