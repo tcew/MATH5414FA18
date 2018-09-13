@@ -31,7 +31,7 @@ typedef struct {
 
   int    *EToE;
   int    *EToF;
-  
+  int    *EToP; // element to rank  
 }mesh_t;
 
 
@@ -46,3 +46,5 @@ mesh_t *meshParallelReaderTri2D(const char * fileName);
 void meshVTUTri2D(mesh_t *msh, char *fileName);
 
 void meshMortonOrderingTri2D(mesh_t *mesh);
+
+void meshParallelConnectTri2D(mesh_t *mesh);

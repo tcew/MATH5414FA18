@@ -26,6 +26,7 @@ LIBS	=  -lm
 
 # list of objects to be compiled
 SOBJS    = \
+src/meshParallelConnectTri2D.o \
 src/meshConnectTri2D.o \
 src/meshMain.o \
 src/meshParallelReaderTri2D.o \

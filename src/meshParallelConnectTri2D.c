@@ -16,6 +16,41 @@ typedef struct {
 
 } lonelyFace_t;
 
+int compareLonelyFaces(const void *a, const void *b){
+
+  const lonelyFace_t *faceA = (lonelyFace_t*) a;
+  const lonelyFace_t *faceB = (lonelyFace_t*) b;
+
+    // assume that v1 is the 2nd digit
+  if(faceA->v1 < faceB->v1)
+    return -1;
+  if(faceA->v1 > faceB->v1)
+    return +1;
+
+  if(faceA->v2 < faceB->v2)
+    return -1;
+  if(faceA->v2 > faceB->v2)
+    return +1;
+
+  return 0;
+}
+
+
+int compareRank(const void *a, const void *b){
+
+  const lonelyFace_t *faceA = (lonelyFace_t*) a;
+  const lonelyFace_t *faceB = (lonelyFace_t*) b;
+
+    // assume that v1 is the 2nd digit
+  if(faceA->rank < faceB->rank)
+    return -1;
+  if(faceA->rank > faceB->rank)
+    return +1;
+
+  return 0;
+}
+  
+
 // find all element-to-element connections across all processes
 void meshParallelConnectTri2D(mesh_t *mesh){
 
@@ -34,7 +69,7 @@ void meshParallelConnectTri2D(mesh_t *mesh){
       if(mesh->EToE[e*mesh->Nfaces + f]==-1){
 	int v1 = mesh->EToV[e*mesh->Nverts + f];
 	int v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
-	int targetRank = min(v1,v2)%size;
+	int targetRank = mymin(v1,v2)%size;
 	// count in bytes
 	sendCounts[targetRank] += sizeof(lonelyFace_t);
       }
@@ -57,20 +92,24 @@ void meshParallelConnectTri2D(mesh_t *mesh){
       if(mesh->EToE[e*mesh->Nfaces + f]==-1){
 	int v1 = mesh->EToV[e*mesh->Nverts + f];
 	int v2 = mesh->EToV[e*mesh->Nverts + (f+1)%mesh->Nverts];
-	int targetRank = min(v1,v2)%size;
+	int targetRank = mymin(v1,v2)%size;
 
 	// meta data for this lonelyFace
 	lonelyFace_t lonely;
 	lonely.element = e;
 	lonely.face = f;
-	lonely.v1 = v1;
-	lonely.v2 = v2;
+	lonely.v1 = mymin(v1,v2);
+	lonely.v2 = mymax(v1,v2);
 	lonely.rank =  rank;
 
+	lonely.elementN = -111;
+	lonely.faceN = -111;
+	lonely.rankN = -111;
+	
 	// identify where this lonelyFace goes in the outgoing buffer
 	int id = sendDispls[targetRank] + sendCounts[targetRank];
 	id /= sizeof(lonelyFace_t); // adjust for bytes
-	lonelyFaces[id] = lonely;
+	sendBuf[id] = lonely;
 
 	// increment sendCounts again
 	sendCounts[targetRank] += sizeof(lonelyFace_t);
@@ -112,7 +151,58 @@ void meshParallelConnectTri2D(mesh_t *mesh){
       recvBuf[n].elementN = recvBuf[n+1].element;
       recvBuf[n].faceN = recvBuf[n+1].face;
       recvBuf[n].rankN = recvBuf[n+1].rank;
+      recvBuf[n+1].elementN = recvBuf[n].element;
+      recvBuf[n+1].faceN = recvBuf[n].face;
+      recvBuf[n+1].rankN = recvBuf[n].rank;
     }
   }
-  
+
+  // reorder to return
+  qsort(recvBuf, NlonelyFaces,
+	sizeof(lonelyFace_t),
+	compareRank);
+
+  // exchange lonelyFaces with all other ranks
+  MPI_Alltoallv(recvBuf, recvCounts, recvDispls, MPI_CHAR,
+		sendBuf, sendCounts, sendDispls, MPI_CHAR,
+		MPI_COMM_WORLD);
+
+  mesh->EToP = (int*) calloc(mesh->Nelements*mesh->Nfaces, sizeof(int));
+  for(int n=0;n<mesh->Nelements*mesh->Nfaces;++n){
+    mesh->EToP[n] = -1;
+  }
+
+  for(int n=0;n<sendDispls[size]/sizeof(lonelyFace_t);++n){
+    int e = sendBuf[n].element;
+    int f = sendBuf[n].face;
+    int eN = sendBuf[n].elementN;
+    int fN = sendBuf[n].faceN;
+    int rN = sendBuf[n].rankN;
+
+    if(eN>=0 && fN>=0){
+      mesh->EToE[e*mesh->Nfaces+f] = eN;
+      mesh->EToF[e*mesh->Nfaces+f] = fN;
+      mesh->EToP[e*mesh->Nfaces+f] = rN;
+    }
+
+    if(sendBuf[n].rank!=rank){
+      printf("WRONG RANK!!!\n");
+      printf("sendBuf[%d].rank =%d\n", n, sendBuf[n].rank);
+    }
+  }
+
+#if 0
+  // for debugging
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      if(mesh->EToP[e*mesh->Nfaces+f]>=0){
+      printf("conn: %d,%d,%d => %d,%d,%d\n",
+	     e,f, rank,
+	     mesh->EToE[e*mesh->Nfaces+f],
+	     mesh->EToF[e*mesh->Nfaces+f],
+	     mesh->EToP[e*mesh->Nfaces+f]);
+      }
+    }
+  }
+#endif
 }
