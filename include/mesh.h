@@ -31,7 +31,12 @@ typedef struct {
 
   int    *EToE;
   int    *EToF;
-  int    *EToP; // element to rank  
+  int    *EToP; // element to rank
+
+  // halo stuff
+  int NhaloElements; // total number of elements to send (also to recv)
+  int *haloElements; // sorted list of elements that need to be sent to other ranks
+  int *NhaloExchangeElements; // number of elements to exchang with each other rank
 }mesh_t;
 
 
