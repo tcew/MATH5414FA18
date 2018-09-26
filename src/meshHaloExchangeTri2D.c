@@ -6,14 +6,20 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
 			   int bytesPerElement){
 
   int rank, size;
+
+  /* 
+     NhaloElements
+     haloElementIndices
+     NhaloExchangeElements (number to send per rank)
+  */
   
   int NhaloElements = mesh->NhaloElements;
   
-  unsigned char *qout = (unsigned char)
+  unsigned char *qout = (unsigned char*)
     malloc(NhaloElements*bytesPerElement);
 
   for(int h=0;h<NhaloElements;++h){
-    int e = mesh->haloElements[h];
+    int e = mesh->haloElementIndices[h];
     memcpy(qout+h*bytesPerElement,
 	   q+e*bytesPerElement,
 	   bytesPerElement);
@@ -35,6 +41,7 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
       int Nexchange =
 	bytesPerElement*mesh->NhaloExchangeElements[r];
       if(Nexchange>0){
+	int tag = 999;
 	MPI_Isend(qout+cnt, Nexchange, MPI_CHAR,
 		  r, tag, MPI_COMM_WORLD, sendRequests+r);
 	MPI_Irecv(qin+cnt, Nexchange, MPI_CHAR,
@@ -46,12 +53,16 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
 
   for(int r=0;r<size;++r){
     if(rank!=r){
-      MPI_Status status;
-      MPI_Wait(sendRequests+r, &status);
-      MPI_Wait(recvRequests+r, &status);
+      int Nexchange =
+	bytesPerElement*mesh->NhaloExchangeElements[r];
+      if(Nexchange>0){
+	MPI_Status status;
+	MPI_Wait(sendRequests+r, &status);
+	MPI_Wait(recvRequests+r, &status);
+      }
     }
   }
-
+  
   free(sendRequests);
   free(recvRequests);
   free(qout);

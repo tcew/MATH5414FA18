@@ -35,7 +35,7 @@ typedef struct {
 
   // halo stuff
   int NhaloElements; // total number of elements to send (also to recv)
-  int *haloElements; // sorted list of elements that need to be sent to other ranks
+  int *haloElementIndices; // sorted list of elements that need to be sent to other ranks
   int *NhaloExchangeElements; // number of elements to exchang with each other rank
 }mesh_t;
 
@@ -53,3 +53,9 @@ void meshVTUTri2D(mesh_t *msh, char *fileName);
 void meshMortonOrderingTri2D(mesh_t *mesh);
 
 void meshParallelConnectTri2D(mesh_t *mesh);
+
+void meshHaloSetupTri2D(mesh_t *mesh);
+
+void meshHaloExchangeTri2D(mesh_t *mesh,
+			   unsigned char *q,
+			   int bytesPerElement);

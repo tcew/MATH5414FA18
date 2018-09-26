@@ -26,6 +26,8 @@ LIBS	=  -lm
 
 # list of objects to be compiled
 SOBJS    = \
+src/meshHaloExchangeTri2D.o \
+src/meshHaloSetupTri2D.o \
 src/meshParallelConnectTri2D.o \
 src/meshConnectTri2D.o \
 src/meshMain.o \
