@@ -1,0 +1,39 @@
+
+@kernel void meshGradientTri2D(int Nelements,
+			       int Np,
+			       dfloat *Dr,
+			       dfloat *Ds,
+			       dfloat *vgeo,
+			       dfloat *q,
+			       dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    // loop over nodes in element e
+    for(int n=0;n<Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+      for(int m=0;m<Np;++m){
+	dqdr += Dr[n*Np+m]*q[m+e*Np];
+	dqds += Ds[n*Np+m]*q[m+e*Np];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*Np*2 + 0*Np + n] = dqdx;
+      gradq[e*Np*2 + 1*Np + n] = dqdy;
+      
+    }
+  }
+
+}

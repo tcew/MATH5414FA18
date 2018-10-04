@@ -59,3 +59,9 @@ void meshHaloSetupTri2D(mesh_t *mesh);
 void meshHaloExchangeTri2D(mesh_t *mesh,
 			   unsigned char *q,
 			   int bytesPerElement);
+
+#define p_RXID 0
+#define p_RYID 1
+#define p_SXID 2
+#define p_SYID 3
+#define p_JID 4

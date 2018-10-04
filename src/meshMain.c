@@ -35,6 +35,50 @@ int main(int argc, char **argv){
 
   meshHaloExchangeTri2D(mesh, mesh->EX, sizeof(dfloat)*mesh->Nverts);
   meshHaloExchangeTri2D(mesh, mesh->EY, sizeof(dfloat)*mesh->Nverts);
+
+  meshVolumeGeometricFactorsTri2D(mesh);
+
+  // insert code to initialize differentiation matrices here
+  mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
+  
+  //
+  dfloat *q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
+  dfloat *gradq = (dfloat*) calloc(2*mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
+
+  meshGradientTri2D(mesh, q, gradq);
+
+  occa::device device("mode: 'Serial'");
+
+  occa::memory o_q = device.malloc(mesh->Nelements*mesh->Np*sizeof(dfloat), q);
+  occa::memory o_gradq = device.malloc(2*mesh->Nelements*mesh->Np*sizeof(dfloat), gradq);
+  occa::memory o_vgeo = device.malloc(mesh->Nelements*mesh->Nvgeo*sizeof(dfloat),
+				      mesh->vgeo);
+
+  occa::memory o_Dr = device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+				    mesh->Dr);
+  
+  
+  occa::memory o_Ds = device.malloc(mesh->Np*mesh->Np*sizeof(dfloat),
+				      mesh->Ds);
+
+  occa::properties props;
+  props["defines/p_RXID"] = p_RXID;
+  props["defines/p_RYID"] = p_RYID;
+  props["defines/p_SXID"] = p_SXID;
+  props["defines/p_SYID"] = p_SYID;
+  props["defines/p_JID"] = p_JID;
+  props["defines/p_Nvgeo"] = mesh->Nvgeo;
+  
+  occa::kernel gradientKernel
+    = device.buildKernel("meshGradientTri2D.okl",
+			 "meshGradientTri2D",
+			 props);
+
+  gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
+
+  o_q.copyTo(q);
+  o_gradq.copyTo(gradq);
   
   for(int e=0;e<mesh->Nelements;++e){
     for(int f=0;f<mesh->Nfaces;++f){
