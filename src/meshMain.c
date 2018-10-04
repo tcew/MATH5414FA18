@@ -11,8 +11,7 @@ int main(int argc, char **argv){
 
   meshHaloSetupTri2D(mesh);
 
-  int *q =
-    (int*) calloc(mesh->Nelements + mesh->NhaloElements,
+  int *qrank = (int*) calloc(mesh->Nelements + mesh->NhaloElements,
 		  sizeof(int));
 
   int rank, size;
@@ -20,10 +19,22 @@ int main(int argc, char **argv){
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
   for(int e=0;e<mesh->Nelements;++e){
-    q[e] = rank;
+    qrank[e] = rank;
   }
 
-  meshHaloExchangeTri2D(mesh, q, sizeof(int));  
+  meshHaloExchangeTri2D(mesh, qrank, sizeof(int));  
+
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int f=0;f<mesh->Nfaces;++f){
+      int r = mesh->EToP[e*mesh->Nfaces+f];
+      if(r!=-1){
+	if(qrank[mesh->EToE[e*mesh->Nfaces+f]]!=r){
+	  printf("Oh dear - got rank %d was expecting %d\n",
+		 qrank[mesh->EToE[e*mesh->Nfaces+f]], r);
+	}
+      }
+    }
+  }
   
   mesh->EX = (dfloat*) realloc(mesh->EX,
 			       (mesh->Nelements+mesh->NhaloElements)*
@@ -36,14 +47,19 @@ int main(int argc, char **argv){
   meshHaloExchangeTri2D(mesh, mesh->EX, sizeof(dfloat)*mesh->Nverts);
   meshHaloExchangeTri2D(mesh, mesh->EY, sizeof(dfloat)*mesh->Nverts);
 
+  // compute geometric factors
   meshVolumeGeometricFactorsTri2D(mesh);
 
+  // load polynomial data for reference triangle
+  int N = 5;
+  meshLoadReferenceNodesTri2D(mesh, N);
+  
   // insert code to initialize differentiation matrices here
   mesh->Dr = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   mesh->Ds = (dfloat*) calloc(mesh->Np*mesh->Np, sizeof(dfloat));
   
   //
-  dfloat *q = (dfloat*) calloc(mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
+  dfloat *q     = (dfloat*) calloc(  mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
   dfloat *gradq = (dfloat*) calloc(2*mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
 
   meshGradientTri2D(mesh, q, gradq);
@@ -69,9 +85,10 @@ int main(int argc, char **argv){
   props["defines/p_SYID"] = p_SYID;
   props["defines/p_JID"] = p_JID;
   props["defines/p_Nvgeo"] = mesh->Nvgeo;
+  props["defines/dfloat"] = dfloatString;
   
   occa::kernel gradientKernel
-    = device.buildKernel("meshGradientTri2D.okl",
+    = device.buildKernel("src/meshGradientTri2D.okl",
 			 "meshGradientTri2D",
 			 props);
 
@@ -79,18 +96,6 @@ int main(int argc, char **argv){
 
   o_q.copyTo(q);
   o_gradq.copyTo(gradq);
-  
-  for(int e=0;e<mesh->Nelements;++e){
-    for(int f=0;f<mesh->Nfaces;++f){
-      int r = mesh->EToP[e*mesh->Nfaces+f];
-      if(r!=-1){
-	if(q[mesh->EToE[e*mesh->Nfaces+f]]!=r){
-	  printf("Oh dear - got rank %d was expecting %d\n",
-		 q[mesh->EToE[e*mesh->Nfaces+f]], r);
-	}
-      }
-    }
-  }
   
   meshVTUTri2D(mesh, "foo.vtu");
   

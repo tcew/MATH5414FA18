@@ -2,7 +2,7 @@
 #include "mesh.h"
 
 void meshHaloExchangeTri2D(mesh_t *mesh,
-			   unsigned char *q,
+			   void  *q,
 			   int bytesPerElement){
 
   int rank, size;
@@ -21,7 +21,7 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
   for(int h=0;h<NhaloElements;++h){
     int e = mesh->haloElementIndices[h];
     memcpy(qout+h*bytesPerElement,
-	   q+e*bytesPerElement,
+	   (unsigned char*) q+e*bytesPerElement,
 	   bytesPerElement);
   }
 
@@ -34,7 +34,7 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
   MPI_Request *recvRequests = (MPI_Request*)
     calloc(size, sizeof(MPI_Request));
   
-  unsigned char *qin = q + bytesPerElement*mesh->Nelements;
+  unsigned char *qin = (unsigned char*) q + bytesPerElement*mesh->Nelements;
   int cnt = 0;
   for(int r=0;r<size;++r){
     if(rank!=r){

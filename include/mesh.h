@@ -4,8 +4,11 @@
 #include <string.h>
 
 #include "mpi.h"
+#include "occa.hpp"
 
 #define dfloat double
+#define dfloatString "double"
+#define dfloatFormat "%lf"
 #define MPI_DFLOAT MPI_DOUBLE
 
 typedef struct {
@@ -37,6 +40,29 @@ typedef struct {
   int NhaloElements; // total number of elements to send (also to recv)
   int *haloElementIndices; // sorted list of elements that need to be sent to other ranks
   int *NhaloExchangeElements; // number of elements to exchang with each other rank
+
+  // geometric factors
+  int Nvgeo;
+  dfloat *vgeo;
+
+  int    N;  // polynomial degree of elements
+  int    Np; // number of nodes per element
+
+  // r,s coordinates of interpolation nodes
+  dfloat *r, *s;
+  
+  // differentiation matrices
+  dfloat *Dr, *Ds;
+
+  // mass matrix
+  dfloat *MM;
+
+  // list of nodes on each face
+  int *faceNodes;
+
+  // LIFT matrix
+  dfloat *LIFT;
+  
 }mesh_t;
 
 
@@ -57,8 +83,18 @@ void meshParallelConnectTri2D(mesh_t *mesh);
 void meshHaloSetupTri2D(mesh_t *mesh);
 
 void meshHaloExchangeTri2D(mesh_t *mesh,
-			   unsigned char *q,
+			   void *q,
 			   int bytesPerElement);
+
+void meshVolumeGeometricFactorsTri2D(mesh_t *mesh);
+
+void meshGradientTri2D(mesh_t *mesh, dfloat *q, dfloat *gradq);
+
+void meshLoadReferenceNodesTri2D(mesh_t *mesh, int N);
+
+void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
+
+void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols);
 
 #define p_RXID 0
 #define p_RYID 1
