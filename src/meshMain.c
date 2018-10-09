@@ -50,16 +50,37 @@ int main(int argc, char **argv){
   meshVolumeGeometricFactorsTri2D(mesh);
 
   // load polynomial data for reference triangle
-  int N = 5; // use this for polynomial array
+  int N = atoi(argv[2]); // use this for polynomial array ( use 2nd argument to define degree )
   meshLoadReferenceNodesTri2D(mesh, N);
 
   // initialize HOST arrays
   dfloat *q     = (dfloat*) calloc(  mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
   dfloat *gradq = (dfloat*) calloc(2*mesh->Np*(mesh->Nelements+mesh->NhaloElements), sizeof(dfloat));
 
+  for(int e=0;e<mesh->Nelements;++e){
+    dfloat x0 = mesh->EX[e*mesh->Nverts+0];
+    dfloat x1 = mesh->EX[e*mesh->Nverts+1];
+    dfloat x2 = mesh->EX[e*mesh->Nverts+2];
+    dfloat y0 = mesh->EY[e*mesh->Nverts+0];
+    dfloat y1 = mesh->EY[e*mesh->Nverts+1];
+    dfloat y2 = mesh->EY[e*mesh->Nverts+2];
+    for(int n=0;n<mesh->Np;++n){
+      dfloat rn =  mesh->r[n];
+      dfloat sn =  mesh->s[n];
+      q[e*mesh->Np+n] = -0.5*(rn+sn)*x0 + 0.5*(1+rn)*x1 + 0.5*(1+sn)*x2;
+    }
+  }
   // compute on HOST
   meshGradientTri2D(mesh, q, gradq);
 
+#if 0
+  for(int e=0;e<mesh->Nelements;++e){
+    for(int n=0;n<mesh->Np;++n){
+      printf("gradq = %lg\n", gradq[e*2*mesh->Np+n]);
+    }
+  }
+#endif
+  
   // initialize DEVICE
   occa::device device("mode: 'CUDA', device_id: 0");
 
@@ -81,16 +102,46 @@ int main(int argc, char **argv){
   props["defines/p_JID"]   = p_JID;
   props["defines/p_Nvgeo"] = mesh->Nvgeo;
   props["defines/dfloat"]  = dfloatString;
+  props["defines/p_Np"]    = mesh->Np;
 
-  // build kernel on DEVICE
-  occa::kernel gradientKernel = device.buildKernel("src/meshGradientTri2D.okl", "meshGradientTri2D", props);
+  int Nkernels = 7;
+  char kernelName[BUFSIZ];
+    
+  for(int k=0;k<Nkernels;++k){
 
-  // compute on DEVICE
-  gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
+    sprintf(kernelName, "meshGradientTri2D_K%02d", k);
+    
+    // build kernel on DEVICE
+    occa::kernel gradientKernel = device.buildKernel("src/meshGradientTri2D.okl",
+						     kernelName, props);
+    
+    // compute on DEVICE
+    gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
 
+    // flush all DEVICE kernels
+    device.finish(); 
+
+    double tic = MPI_Wtime();
+    
+    int Ntests = 10;
+    for(int test=0;test<Ntests;++test){
+      gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
+    }
+
+    // flush all DEVICE kernels
+    device.finish(); 
+    
+    double toc = MPI_Wtime();
+
+    printf("average elapsed time for kernel %02d is %lg\n",
+	   k, (toc-tic)/Ntests);
+  }
+  
   // copy data back to HOST
   o_q.copyTo(q);
   o_gradq.copyTo(gradq);
+
+  printf("gradq[43] = %lg\n", gradq[43]);
   
   meshVTUTri2D(mesh, "foo.vtu");
   

@@ -1,8 +1,7 @@
 
 #include "mesh.h"
 
-void meshGradientTri2D(mesh_t *mesh, dfloat *q,
-		       dfloat *gradq){
+void meshGradientTri2D(mesh_t *mesh, dfloat *q, dfloat *gradq){
 
   // loop over elements
   for(int e=0;e<mesh->Nelements;++e){

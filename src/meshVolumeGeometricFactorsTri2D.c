@@ -31,13 +31,15 @@ void meshVolumeGeometricFactorsTri2D(mesh_t *mesh){
     dfloat dydr = 0.5*(y1-y0);
     dfloat dyds = 0.5*(y2-y0);
 
-    dfloat J = dxdr*dyds - dxds*dxdr;
+    dfloat J = dxdr*dyds - dxds*dydr;
 
     dfloat drdx =  dyds/J;
     dfloat dsdx = -dydr/J;
     dfloat drdy = -dxds/J;
     dfloat dsdy =  dxdr/J;
 
+    //    printf("vgeo = %g,%g,%g,%g,%g \n", drdx, dsdx, drdy, dsdy, J);
+    
     mesh->vgeo[e*mesh->Nvgeo + p_RXID] = drdx;
     mesh->vgeo[e*mesh->Nvgeo + p_RYID] = drdy;
     mesh->vgeo[e*mesh->Nvgeo + p_SXID] = dsdx;

@@ -1,11 +1,11 @@
 
-@kernel void meshGradientTri2D(int Nelements,
-			       int Np,
-			       dfloat *Dr,
-			       dfloat *Ds,
-			       dfloat *vgeo,
-			       dfloat *q,
-			       dfloat *gradq){
+@kernel void meshGradientTri2D_K00(int Nelements,
+				   int Np,
+				   dfloat *Dr,
+				   dfloat *Ds,
+				   dfloat *vgeo,
+				   dfloat *q,
+				   dfloat *gradq){
 
   // loop over elements
   for(int e=0;e<Nelements;++e;@outer(0)){
@@ -32,6 +32,270 @@
       // TW: explain this more later
       gradq[e*Np*2 + 0*Np + n] = dqdx;
       gradq[e*Np*2 + 1*Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+// K01: hard coded p_Np 
+@kernel void meshGradientTri2D_K01(int Nelements,
+				   int Np,
+				   dfloat *Dr,
+				   dfloat *Ds,
+				   dfloat *vgeo,
+				   dfloat *q,
+				   dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np+m]*q[m+e*p_Np];
+	dqds += Ds[n*p_Np+m]*q[m+e*p_Np];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+// K02: const the arrays that have constant data 
+@kernel void meshGradientTri2D_K02(const int Nelements,
+				   const int Np,
+				   const dfloat *Dr,
+				   const dfloat *Ds,
+				   const dfloat *vgeo,
+				   const dfloat *q,
+				   dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np+m]*q[m+e*p_Np];
+	dqds += Ds[n*p_Np+m]*q[m+e*p_Np];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+
+// K03: declare arrays as independent arrays
+@kernel void meshGradientTri2D_K03(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *Dr,
+				   @restrict const dfloat *Ds,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np+m]*q[m+e*p_Np];
+	dqds += Ds[n*p_Np+m]*q[m+e*p_Np];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+// K04: unroll serial loop
+@kernel void meshGradientTri2D_K04(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *Dr,
+				   @restrict const dfloat *Ds,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np+m]*q[m+e*p_Np];
+	dqds += Ds[n*p_Np+m]*q[m+e*p_Np];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+
+// K05: prefetch q for element e into shared memory
+@kernel void meshGradientTri2D_K05(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *Dr,
+				   @restrict const dfloat *Ds,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Np];
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      s_q[n] = q[n+e*p_Np];
+    }
+
+    @barrier("local");
+    
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dqdr += Dr[n*p_Np+m]*s_q[m];
+	dqds += Ds[n*p_Np+m]*s_q[m];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+
+// K06: transpose Dr and Ds
+@kernel void meshGradientTri2D_K06(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *DrT,
+				   @restrict const dfloat *DsT,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Np];
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      s_q[n] = q[n+e*p_Np];
+    }
+
+    @barrier("local");
+    
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	dqdr += DrT[n+p_Np*m]*s_q[m];
+	dqds += DsT[n+p_Np*m]*s_q[m];
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
       
     }
   }

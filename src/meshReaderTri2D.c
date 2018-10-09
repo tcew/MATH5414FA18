@@ -29,37 +29,59 @@ mesh_t *meshReaderTri2D(const char * fileName ){
     fscanf(fp, "%*d %lf %lf %*lf", 
 	   mesh->VX+v,
 	   mesh->VY+v);
-    //    printf("%d %g %g \n", v, mesh->VX[v], mesh->VY[v]);
   }
 
   do{
     fgets(buf, BUFSIZ, fp);
   }while(!strstr(buf, "$Elements"));
 
-  fscanf(fp, "%d", &(mesh->Nelements));
+  int Nelements;
+  fscanf(fp, "%d", &Nelements);
 
-  mesh->EToV = 
-    (int*) calloc(mesh->Nelements*mesh->Nverts, 
-		     sizeof(int));
+  // set marker in file
+  fpos_t pos;
+  fgetpos(fp, &pos);
+
+  // count number of triangles
+  int Ntriangles = 0;
+  for(int e=0;e<Nelements;++e){
+    int etype;
+    fscanf(fp, "%*d %d", 
+	   &etype);
+    if(etype==2) ++Ntriangles;
+    fgets(buf, BUFSIZ, fp);
+  }
+
+  // rewind to element section
+  fsetpos(fp, &pos);
   
-  for(int e=0;e<mesh->Nelements;++e){
+  mesh->Nelements = Ntriangles;
+  
+  mesh->EToV = 
+    (int*) calloc(mesh->Nelements*mesh->Nverts, sizeof(int));
+
+  int triangle = 0;
+  for(int e=0;e<Nelements;++e){
     int etype, Ntags;
-    fscanf(fp, "%*d %d %d", 
-	   &etype,
-	   &Ntags);
+    fscanf(fp, "%*d %d %d", &etype, &Ntags);
+    
+    if(etype==2){
+      for(int t=0;t<Ntags;++t)
+	fscanf(fp, "%*d");
+      
+      for(int v=0;v<mesh->Nverts;++v){
+	fscanf(fp, "%d", mesh->EToV + triangle*mesh->Nverts+v);
+	
+	// change from 1-index to 0-index
+	--(mesh->EToV[triangle*mesh->Nverts+v]);
 
-    for(int t=0;t<Ntags;++t)
-      fscanf(fp, "%*d");
+      }
 
-    //    printf("EToV[e,:]= ");
-    for(int v=0;v<mesh->Nverts;++v){
-      fscanf(fp, "%d", mesh->EToV + e*mesh->Nverts+v);
-
-      // change from 1-index to 0-index
-      --(mesh->EToV[e*mesh->Nverts+v]);
-      //      printf("%d ", mesh->EToV[e*mesh->Nverts+v]);
+      ++triangle;
     }
-    //    printf("\n");
+    else{
+      fgets(buf, BUFSIZ, fp);      
+    }
   }
 
   fclose(fp);
