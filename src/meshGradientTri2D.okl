@@ -301,3 +301,205 @@
   }
 
 }
+
+// K07: fetch from shared to register
+@kernel void meshGradientTri2D_K07(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *DrT,
+				   @restrict const dfloat *DsT,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+  // loop over elements
+  for(int e=0;e<Nelements;++e;@outer(0)){
+
+    @shared dfloat s_q[p_Np];
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      s_q[n] = q[n+e*p_Np];
+    }
+
+    @barrier("local");
+    
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr = 0;
+      dfloat dqds = 0;
+
+      // compute derivative at  node n of element e
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	const dfloat qm = s_q[m];
+	dqdr += DrT[n+p_Np*m]*qm;
+	dqds += DsT[n+p_Np*m]*qm;
+      }
+
+      dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+      dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+      dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+      dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+
+      dfloat dqdx = drdx*dqdr + dsdx*dqds;
+      dfloat dqdy = drdy*dqdr + dsdy*dqds;
+
+      // TW: explain this more later
+      gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+      gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+      
+    }
+  }
+
+}
+
+
+
+// K08: reduce shared traffic by grouping elements (multiple outputs)
+@kernel void meshGradientTri2D_K08(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *DrT,
+				   @restrict const dfloat *DsT,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+#define p_NblockG 6
+
+  // loop over elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockG;@outer(0)){
+
+    @shared dfloat s_q[p_NblockG][p_Np];
+
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      for(int es=0;es<p_NblockG;++es){
+	int e = eo + es;
+	if(e<Nelements){
+	  s_q[es][n] = q[n+e*p_Np];
+	}
+      }
+    }
+
+    @barrier("local");
+    
+    // loop over nodes in element e
+    for(int n=0;n<p_Np;++n;@inner(0)){
+      dfloat dqdr[p_NblockG];
+      dfloat dqds[p_NblockG];
+      
+      for(int es=0;es<p_NblockG;++es){
+	dqdr[es] = 0;
+	dqds[es] = 0;
+      }
+
+      // compute derivative at  node n of element e
+#pragma unroll p_Np
+      for(int m=0;m<p_Np;++m){
+	const dfloat dr = DrT[n+p_Np*m];
+	const dfloat ds = DsT[n+p_Np*m];
+	for(int es=0;es<p_NblockG;++es){
+	  const dfloat qm = s_q[es][m];
+	  dqdr[es] += dr*qm;
+	  dqds[es] += ds*qm;
+	}
+      }
+      
+      
+      for(int es=0;es<p_NblockG;++es){
+	int e = eo + es;
+	if(e<Nelements){
+	  dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	  dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	  dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	  dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	  
+	  dfloat dqdx = drdx*dqdr[es] + dsdx*dqds[es];
+	  dfloat dqdy = drdy*dqdr[es] + dsdy*dqds[es];
+	  
+	  // TW: explain this more later
+	  gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+	  gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+	  
+	}
+      }
+    }
+  }
+}
+
+
+// K09: increase SIMD vector lengths
+@kernel void meshGradientTri2D_K09(const int Nelements,
+				   const int Np,
+				   @restrict const dfloat *DrT,
+				   @restrict const dfloat *DsT,
+				   @restrict const dfloat *vgeo,
+				   @restrict const dfloat *q,
+				   @restrict dfloat *gradq){
+
+#define p_NblockG 3
+#define p_Ngroup  1
+  
+  // loop over elements
+  for(int eo=0;eo<Nelements;eo+=p_NblockG*p_Ngroup;@outer(0)){
+
+    @shared dfloat s_q[p_NblockG][p_Ngroup][p_Np];
+    
+    for(int g=0;g<p_Ngroup;++g;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	for(int es=0;es<p_NblockG;++es){
+	  int e = eo + es + p_NblockG*g;
+	  if(e<Nelements){
+	    s_q[es][g][n] = q[n+e*p_Np];
+	  }
+	}
+      }
+    }
+    
+    @barrier("local");
+    
+    // loop over nodes in element e
+    for(int g=0;g<p_Ngroup;++g;@inner(1)){
+      for(int n=0;n<p_Np;++n;@inner(0)){
+	dfloat dqdr[p_NblockG];
+	dfloat dqds[p_NblockG];
+	
+	for(int es=0;es<p_NblockG;++es){
+	  dqdr[es] = 0;
+	  dqds[es] = 0;
+	}
+	
+	// compute derivative at  node n of element e
+#pragma unroll p_Np
+	for(int m=0;m<p_Np;++m){
+	  const dfloat dr = DrT[n+p_Np*m];
+	  const dfloat ds = DsT[n+p_Np*m];
+	  for(int es=0;es<p_NblockG;++es){
+	    const dfloat qm = s_q[es][g][m];
+	    dqdr[es] += dr*qm;
+	    dqds[es] += ds*qm;
+	  }
+	}
+	
+	for(int es=0;es<p_NblockG;++es){
+	  int e = eo + es + p_NblockG*g;
+	  
+	  if(e<Nelements){
+	    dfloat drdx = vgeo[e*p_Nvgeo + p_RXID];
+	    dfloat dsdx = vgeo[e*p_Nvgeo + p_SXID];
+	    dfloat drdy = vgeo[e*p_Nvgeo + p_RYID];
+	    dfloat dsdy = vgeo[e*p_Nvgeo + p_SYID];
+	    
+	    dfloat dqdx = drdx*dqdr[es] + dsdx*dqds[es];
+	    dfloat dqdy = drdy*dqdr[es] + dsdy*dqds[es];
+	    
+	    // TW: explain this more later
+	    gradq[e*p_Np*2 + 0*p_Np + n] = dqdx;
+	    gradq[e*p_Np*2 + 1*p_Np + n] = dqdy;
+	    
+	  }
+	}
+      }
+    }
+  }
+}

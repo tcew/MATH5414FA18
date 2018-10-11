@@ -51,10 +51,13 @@ all: meshMain
 meshMain:$(SOBJS) 
 	$(LD)  $(LDFLAGS) -o meshMain $(SOBJS) $(LIBS)
 
+bandwidthTest:src/bandwidthTest.o
+	$(LD) $(LDFLAGS) -o bandwidthTest src/bandwidthTest.o $(LIBS)
+
 # what to do if user types "make clean"
 clean :
-	rm -r $(SOBJS) meshMain
+	rm -r $(SOBJS) meshMain src/bandwidthTest.o
 
 realclean :
-	rm -r $(SOBJS) meshMain
+	rm -r $(SOBJS) meshMain src/bandwidthTest.o
 

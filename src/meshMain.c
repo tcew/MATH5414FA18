@@ -104,7 +104,7 @@ int main(int argc, char **argv){
   props["defines/dfloat"]  = dfloatString;
   props["defines/p_Np"]    = mesh->Np;
 
-  int Nkernels = 7;
+  int Nkernels = 10;
   char kernelName[BUFSIZ];
     
   for(int k=0;k<Nkernels;++k){
@@ -146,8 +146,9 @@ int main(int argc, char **argv){
   
   meshVTUTri2D(mesh, "foo.vtu");
 
+  if(1)
   {
-    for(int Nmil=5;Nmil<200;Nmil+=5){
+    for(int Nmil=4;Nmil<640;Nmil+=4){
 
       //  measure on DEVICE memcpy bandwidth
       size_t Nbytes = Nmil*1000000;
