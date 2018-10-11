@@ -118,23 +118,24 @@ int main(int argc, char **argv){
     // compute on DEVICE
     gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
 
-    // flush all DEVICE kernels
-    device.finish(); 
-
-    double tic = MPI_Wtime();
+    // record start of gradient
+    occa::streamTag startGradient = device.tagStream();
     
     int Ntests = 10;
     for(int test=0;test<Ntests;++test){
       gradientKernel(mesh->Nelements, mesh->Np, o_Dr, o_Ds, o_vgeo, o_q, o_gradq);
     }
 
+    // record start of gradient
+    occa::streamTag endGradient = device.tagStream();
+    
     // flush all DEVICE kernels
     device.finish(); 
-    
-    double toc = MPI_Wtime();
 
+    double elapsed = device.timeBetween(startGradient, endGradient);
+    
     printf("average elapsed time for kernel %02d is %lg\n",
-	   k, (toc-tic)/Ntests);
+	   k, elapsed/Ntests);
   }
   
   // copy data back to HOST
@@ -144,6 +145,35 @@ int main(int argc, char **argv){
   printf("gradq[43] = %lg\n", gradq[43]);
   
   meshVTUTri2D(mesh, "foo.vtu");
+
+  {
+    for(int Nmil=5;Nmil<200;Nmil+=5){
+
+      //  measure on DEVICE memcpy bandwidth
+      size_t Nbytes = Nmil*1000000;
+
+      occa::memory o_A = device.malloc(Nbytes);
+      occa::memory o_B = device.malloc(Nbytes);
+
+      occa::streamTag startCopy = device.tagStream();
+
+      // read from B and write to A
+      o_A.copyFrom(o_B);
+
+      occa::streamTag endCopy = device.tagStream();
+
+      device.finish(); 
+      
+      double elapsed = device.timeBetween(startCopy, endCopy);
+      double bandwidth = 2*Nbytes/( elapsed*1.e9);
+      
+      printf("measured bwidth for %lu bytes is %lg GB/s in elapsed time %lg\n",
+	     Nbytes, bandwidth, elapsed); // read + write 
+      
+      o_A.free();
+      o_B.free();
+    }
+  }
   
   MPI_Finalize();
 
