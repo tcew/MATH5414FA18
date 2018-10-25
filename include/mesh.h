@@ -62,6 +62,12 @@ typedef struct {
 
   // LIFT matrix
   dfloat *LIFT;
+
+  // OCCA INFO
+  occa::device device;
+  occa::kernel haloExtractKernel;
+  occa::memory o_haloElementIndices; // sorted list of elements that need to be sent to other ranks
+  
   
 }mesh_t;
 
@@ -95,6 +101,16 @@ void meshLoadReferenceNodesTri2D(mesh_t *mesh, int N);
 void readDfloatArray(FILE *fp, const char *label, dfloat **A, int *Nrows, int* Ncols);
 
 void readIntArray(FILE *fp, const char *label, int **A, int *Nrows, int* Ncols);
+
+void meshHybridHaloExchangeTri2D(mesh_t *mesh,
+				 int NbytesPerElement,
+				 occa::memory &o_q,
+				 occa::memory &o_haloq,
+				 dfloat *haloq,
+				 dfloat *qin,
+				 MPI_Request *sendRequests,
+				 MPI_Request *recvRequests);
+
 
 #define p_RXID 0
 #define p_RYID 1

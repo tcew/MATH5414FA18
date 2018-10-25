@@ -18,7 +18,7 @@ CFLAGS = -I$(HDRDIR)  -g -DOCCA_VERSION_1_0 $(compilerFlags) $(flags)  $(paths)
 
 
 # link flags to be used 
-LDFLAGS	=  -O3 $(compilerFlags) -DOCCA_VERSION_1_0
+LDFLAGS	=  $(compilerFlags) -DOCCA_VERSION_1_0
 
 # libraries to be linked in
 LIBS	= -L$(OCCA_DIR)/lib $(links) -lm 
@@ -36,7 +36,6 @@ src/meshHaloExchangeTri2D.o \
 src/meshHaloSetupTri2D.o \
 src/meshParallelConnectTri2D.o \
 src/meshConnectTri2D.o \
-src/meshMain.o \
 src/meshParallelReaderTri2D.o \
 src/meshReaderTri2D.o \
 src/meshVTUTri2D.o \
@@ -48,8 +47,11 @@ src/readArray.o
 
 all: meshMain
 
-meshMain:$(SOBJS) 
-	$(LD)  $(LDFLAGS) -o meshMain $(SOBJS) $(LIBS)
+meshMain:$(SOBJS) src/meshMain.o 
+	$(LD)  $(LDFLAGS) -o meshMainsrc/meshMain.o  $(SOBJS) $(LIBS)
+
+meshHaloMain:$(SOBJS) src/meshHaloMainTri2D.o
+	$(LD)  $(LDFLAGS) -o meshHaloMain src/meshHaloMainTri2D.o $(SOBJS) $(LIBS)
 
 bandwidthTest:src/bandwidthTest.o
 	$(LD) $(LDFLAGS) -o bandwidthTest src/bandwidthTest.o $(LIBS)

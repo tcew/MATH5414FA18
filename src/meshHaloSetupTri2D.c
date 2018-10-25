@@ -93,6 +93,9 @@ void meshHaloSetupTri2D(mesh_t *mesh){
     haloElementIndices[n] = haloFaces[n].element;
   }
 
+  // shadow copy onto DEVICE
+  mesh->o_haloElementIndices = mesh->device.malloc(NhaloElements*sizeof(int), haloElementIndices);
+  
   mesh->NhaloElements = NhaloElements;
   mesh->NhaloExchangeElements = NhaloExchangeElements;
   mesh->haloElementIndices = haloElementIndices;

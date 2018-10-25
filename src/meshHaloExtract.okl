@@ -1,10 +1,4 @@
 
-
-    memcpy(qout+h*bytesPerElement,
-	   (unsigned char*) q+e*bytesPerElement,
-	   bytesPerElement);
-  }
-
 @kernel void meshHaloExtract(const int NhaloElements,
 			     const int quarterNbytesPerElement,
 			     @restrict const int *haloElementIndices,
