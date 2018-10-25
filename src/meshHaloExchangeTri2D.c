@@ -76,13 +76,15 @@ void meshHaloExtractTri2D(mesh_t *mesh,
 			  dfloat *qout){
 
   int quarterNbytesPerElement = NbytesPerElement/4;
+
+  printf("qNPE = %d, NHE=%d\n", quarterNbytesPerElement, mesh->NhaloElements);
   
   mesh->haloExtractKernel(mesh->NhaloElements,
 			  quarterNbytesPerElement,
 			  mesh->o_haloElementIndices,
 			  o_q,
 			  o_haloq);
-
+  
   o_haloq.copyTo(qout);
   
 }
@@ -163,6 +165,8 @@ void meshHybridHaloExchangeTri2D(mesh_t *mesh,
 				 MPI_Request *sendRequests,
 				 MPI_Request *recvRequests){
 
+
+
   if(mesh->NhaloElements){
 
     // extract halo data from DEVICE o_q to DEVICE o_haloq and copy to HOST haloq 
@@ -178,5 +182,6 @@ void meshHybridHaloExchangeTri2D(mesh_t *mesh,
     
     // copy data from HOST qin to DEVICE o_q
     meshHaloInjectTri2D(mesh, NbytesPerElement, haloqin, o_q);
+
   }
 }
