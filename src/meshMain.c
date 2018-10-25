@@ -143,6 +143,13 @@ int main(int argc, char **argv){
   o_gradq.copyTo(gradq);
 
   printf("gradq[43] = %lg\n", gradq[43]);
+
+  // build kernel on DEVICE
+  mesh->haloExtractKernel =
+    device.buildKernel("src/meshHaloExtract.okl",
+		       "meshHaloExtract", props);
+
+  
   
   meshVTUTri2D(mesh, "foo.vtu");
   

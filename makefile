@@ -56,8 +56,8 @@ bandwidthTest:src/bandwidthTest.o
 
 # what to do if user types "make clean"
 clean :
-	rm -r $(SOBJS) meshMain src/bandwidthTest.o
+	rm -r $(SOBJS) meshMain src/bandwidthTest.o bandwidthTest
 
 realclean :
-	rm -r $(SOBJS) meshMain src/bandwidthTest.o
+	rm -r $(SOBJS) meshMain src/bandwidthTest.o bandwidthTest
 

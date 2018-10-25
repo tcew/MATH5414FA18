@@ -69,34 +69,49 @@ void meshHaloExchangeTri2D(mesh_t *mesh,
 }
 
 
+void meshHaloExtractTri2D(mesh_t *mesh,
+			  int    NbytesPerElement,
+			  occa::memory &o_q,
+			  occa::memory &o_haloq,
+			  dfloat *qout){
+
+  int quarterNbytesPerElement = NbytesPerElement/4;
+  
+  mesh->haloExtractKernel(mesh->NhaloElements,
+			  quarterNbytesPerElement,
+			  o_q,
+			  o_haloq);
+
+  o_haloq.copyTo(qout);
+  
+}
+
+void meshHaloInjectTri2D(mesh_t *mesh,
+			 int    NbytesPerElement,
+			 dfloat *qin,
+			 occa::memory &o_q){
+  
+  int NhaloBytes = NbytesPerElement*mesh->NhaloElements;
+  
+  o_q.copyFrom(qin, NhaloBytes, offset);
+  
+}
+
 void meshHaloExchangeStartTri2D(mesh_t *mesh,
 				void   *q,
-				void   *qout,
+				void   *haloq,
 				int bytesPerElement,
 				MPI_Requests *sendRequests,
 				MPI_Requests *recvRequests){
 
   int rank, size;
-
-  /* 
-     NhaloElements
-     haloElementIndices
-     NhaloExchangeElements (number to send per rank)
-  */
   
   int NhaloElements = mesh->NhaloElements;
   
-  for(int h=0;h<NhaloElements;++h){
-    int e = mesh->haloElementIndices[h];
-    memcpy(qout+h*bytesPerElement,
-	   (unsigned char*) q+e*bytesPerElement,
-	   bytesPerElement);
-  }
-
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-  unsigned char *qin = (unsigned char*) q + bytesPerElement*mesh->Nelements;
+  unsigned char *qin = haloq;
   int cnt = 0;
   for(int r=0;r<size;++r){
     if(rank!=r){
@@ -135,4 +150,32 @@ void meshHaloExchangeFinishTri2D(mesh_t *mesh,
       }
     }
   }
+}
+
+void meshHybridHaloExchangeTri2D(mesh_t *mesh,
+				 int NbytesPerElement,
+				 occa::memory &o_q,
+				 occa::memory &o_haloq,
+				 dfloat *haloq,
+				 dfloat *qin,
+				 MPI_Requests *sendRequests,
+				 MPI_Requests *recvRequests){
+
+  meshHaloExtractTri2D(mesh,NbytesPerElement,o_q,o_haloq,haloq);
+
+  meshHaloExchangeStartTri2D(mesh, haloq, NbytesPerElement,sendRequests,
+			     recvRequests);
+
+  // do something here
+  
+  meshHaloExchangeFinishTri2D(mesh,
+			      NbytesPerElement,
+			      sendRequests,
+			      recvRequests);
+
+  meshHaloInjectTri2D(mesh,
+		      NbytesPerElement,
+		      qin,
+		      o_q);
+  
 }

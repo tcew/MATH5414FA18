@@ -1,0 +1,36 @@
+
+
+    memcpy(qout+h*bytesPerElement,
+	   (unsigned char*) q+e*bytesPerElement,
+	   bytesPerElement);
+  }
+
+@kernel void meshHaloExtract(const int NhaloElements,
+			     const int quarterNbytesPerElement,
+			     @restrict const int *haloElementIndices,
+			     @restrict const char4 *q,
+			     @restrict char4 *qout){
+  
+
+  for(int h=0;h<NhaloElements;++h;@outer(0)){
+    for(int n=0;n<quarterNbytesPerElement;++n;@inner(0)){
+      int e = haloElementIndices[h];
+
+      qout[h*(quarterNbytesPerElement) + n] =
+	q[e*(quarterNbytesPerElement) + n];
+    }
+  }
+
+#if 0
+  for(int n=0;n<NhaloElements*(NbytesPerElement/4);++n;@tile(256)){
+    if(n<NhaloElements*(NbytesPerElement/4)){
+      int h = n/(NbytesPerElement/4);
+      int e = haloElementIndices[h];
+      int node = n%(NbytesPerElement/4);
+      qout[n] = 
+	q[h*(bytesPerElement/4) + node] =
+    }
+  }
+#endif
+}
+			     
