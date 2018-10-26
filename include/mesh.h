@@ -112,6 +112,25 @@ void meshHybridHaloExchangeTri2D(mesh_t *mesh,
 				 MPI_Request *recvRequests);
 
 
+void meshHybridHaloExchangeStartTri2D(mesh_t *mesh,
+				      int NbytesPerElement,
+				      occa::memory &o_q,
+				      occa::memory &o_haloq,
+				      dfloat *haloqout,
+				      dfloat *haloqin,
+				      MPI_Request *sendRequests,
+				      MPI_Request *recvRequests);
+
+void meshHybridHaloExchangeEndTri2D(mesh_t *mesh,
+				    int NbytesPerElement,
+				    occa::memory &o_q,
+				    occa::memory &o_haloq,
+				    dfloat *haloqout,
+				    dfloat *haloqin,
+				    MPI_Request *sendRequests,
+				    MPI_Request *recvRequests);
+
+
 #define p_RXID 0
 #define p_RYID 1
 #define p_SXID 2

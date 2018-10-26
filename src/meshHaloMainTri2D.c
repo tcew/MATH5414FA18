@@ -133,6 +133,11 @@ int main(int argc, char **argv){
   occa::stream defaultStream = mesh->device.getStream();
   occa::stream dataStream    = mesh->device.createStream();
   occa::stream computeStream = mesh->device.createStream();
+
+  
+  mesh->device.setStream(dataStream);
+    
+  meshHybridHaloExchangeStartTri2D(mesh, mesh->Np*sizeof(dfloat), o_q, o_haloq, haloqout, haloqin, sendRequests, recvRequests);
   
   mesh->device.setStream(computeStream);
 
@@ -140,7 +145,8 @@ int main(int argc, char **argv){
 
   mesh->device.setStream(dataStream);
 
-  meshHybridHaloExchangeTri2D(mesh, mesh->Np*sizeof(dfloat), o_q, o_haloq, haloqout, haloqin, sendRequests, recvRequests);
+  meshHybridHaloExchangeEndTri2D(mesh, mesh->Np*sizeof(dfloat), o_q, o_haloq, haloqout, haloqin, sendRequests, recvRequests);
+  
   
   mesh->device.finish();
   //  meshVTUTri2D(mesh, "foo.vtu");

@@ -85,8 +85,6 @@ void meshHaloExtractTri2D(mesh_t *mesh,
 			  o_q,
 			  o_haloq);
   
-  o_haloq.copyTo(qout);
-  
 }
 
 void meshHaloInjectTri2D(mesh_t *mesh,
@@ -171,7 +169,59 @@ void meshHybridHaloExchangeTri2D(mesh_t *mesh,
 
     // extract halo data from DEVICE o_q to DEVICE o_haloq and copy to HOST haloq 
     meshHaloExtractTri2D(mesh,NbytesPerElement,o_q,o_haloq,haloqout);
+  
+    o_haloq.copyTo(haloqout);
+    
+    // start up requests to send data HOST<>HOST with MPI
+    meshHaloExchangeStartTri2D(mesh, haloqout, haloqin, NbytesPerElement,sendRequests, recvRequests);
+    
+    // do something here
+    
+    // finalize MPI exchanges
+    meshHaloExchangeFinishTri2D(mesh, NbytesPerElement, sendRequests,  recvRequests);
+    
+    // copy data from HOST qin to DEVICE o_q
+    meshHaloInjectTri2D(mesh, NbytesPerElement, haloqin, o_q);
 
+  }
+}
+
+
+void meshHybridHaloExchangeStartTri2D(mesh_t *mesh,
+				      int NbytesPerElement,
+				      occa::memory &o_q,
+				      occa::memory &o_haloq,
+				      dfloat *haloqout,
+				      dfloat *haloqin,
+				      MPI_Request *sendRequests,
+				      MPI_Request *recvRequests){
+  
+
+
+  if(mesh->NhaloElements){
+
+    // extract halo data from DEVICE o_q to DEVICE o_haloq and copy to HOST haloq 
+    meshHaloExtractTri2D(mesh,NbytesPerElement,o_q,o_haloq,haloqout);
+  }
+
+}
+
+
+void meshHybridHaloExchangeEndTri2D(mesh_t *mesh,
+				    int NbytesPerElement,
+				    occa::memory &o_q,
+				    occa::memory &o_haloq,
+				    dfloat *haloqout,
+				    dfloat *haloqin,
+				    MPI_Request *sendRequests,
+				    MPI_Request *recvRequests){
+
+
+
+  if(mesh->NhaloElements){
+
+    o_haloq.copyTo(haloqout);
+    
     // start up requests to send data HOST<>HOST with MPI
     meshHaloExchangeStartTri2D(mesh, haloqout, haloqin, NbytesPerElement,sendRequests, recvRequests);
     
