@@ -53,6 +53,9 @@ meshMain:$(SOBJS) src/meshMain.o
 meshHaloMain:$(SOBJS) src/meshHaloMainTri2D.o
 	$(LD)  $(LDFLAGS) -o meshHaloMain src/meshHaloMainTri2D.o $(SOBJS) $(LIBS)
 
+occaAtomic: src/occaAtomicMain.o
+	$(LD)  $(LDFLAGS) -o occaAtomicMain src/occaAtomicMain.o $(LIBS)
+
 bandwidthTest:src/bandwidthTest.o
 	$(LD) $(LDFLAGS) -o bandwidthTest src/bandwidthTest.o $(LIBS)
 

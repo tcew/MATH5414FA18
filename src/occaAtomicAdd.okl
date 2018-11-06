@@ -1,0 +1,10 @@
+
+@kernel void occaAtomicAdd(int *output){
+
+  for(int b=0;b<512;b+=256;@outer(0)){
+    for(int n=b;n<b+256;++n;@inner(0)){
+      atomicAdd(output, 1);
+    }
+  }
+
+}
