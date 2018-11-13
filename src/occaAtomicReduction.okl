@@ -1,0 +1,28 @@
+
+@kernel void occaAtomicReduction_v01(int N, int *a, int *output){
+
+  for(int b=0;b<N;b+=256;@outer(0)){
+    for(int n=b;n<b+256;++n;@inner(0)){
+      if(n<N){
+	const int an = a[n];
+	atomicAdd(output, an);
+      }
+    }
+  }
+
+}
+
+
+@kernel void occaAtomicReduction(int N, int *a, int *output){
+
+  for(int b=0;b<N;b+=256;@outer(0)){
+    for(int n=b;n<b+256;++n;@inner(0)){
+      if(n<N){
+	const int t = b/256;
+	const int an = a[n];
+	atomicAdd(output+t, an);
+      }
+    }
+  }
+
+}

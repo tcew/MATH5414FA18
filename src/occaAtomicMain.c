@@ -14,10 +14,24 @@ int main(int argc, char **argv){
   occa::kernel atomicAdd = device.buildKernel("src/occaAtomicAdd.okl",
 					      "occaAtomicAdd");
 
-  int *output = (int*) calloc(1, sizeof(int));
-  occa::memory o_output = device.malloc(1*sizeof(int), output);
+  occa::kernel atomicReduction = device.buildKernel("src/occaReduction.okl",
+						    "occaReduction");
 
-  atomicAdd(o_output);
+
+  int N = atoi(argv[1]);
+
+  int *h_a = (int*) calloc(N, sizeof(int));
+  for(int n=0;n<N;++n)
+    h_a[n] = 1;
+
+  int B = (N+255)/256;
+  int *output = (int*) calloc(B, sizeof(int));
+  occa::memory o_output = device.malloc(B*sizeof(int), output);
+
+  occa::memory o_a = device.malloc(N*sizeof(int), h_a);
+
+  //  atomicAdd(o_output);
+  atomicReduction(N, o_a, o_output);
 
   o_output.copyTo(output);
   printf("output[0] = %d\n", output[0]);
